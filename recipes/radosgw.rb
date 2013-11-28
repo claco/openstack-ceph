@@ -129,3 +129,41 @@ keystone_endpoint "Register Storage Endpoint" do
   endpoint_publicurl rgw_access['uri']
   action :create
 end
+
+# This is a work around until PR https://github.com/ceph/ceph-cookbooks/pull/79 is merged.
+# Once merged remove below this point although it shouldn't cause any issues.
+
+case node['platform_family']
+when "debian"
+  packages = %w{
+    libnss3-tools
+  }
+when "rhel","fedora","suse"
+  packages = %w{
+    nss-tools
+  }
+end
+
+packages.each do |pkg|
+  package pkg do
+    action :upgrade
+  end
+end
+
+if !(node["ceph"]["radosgw"]["keystone_ca"].nil? || node["ceph"]["radosgw"]["keystone_signing"].nil? || node["ceph"]["config"]["rgw"]["nss db path"].nil?)
+  directory "#{node['ceph']['config']['rgw']['nss db path']}" do
+    owner "root"
+    group "root"
+    mode 0755
+    recursive true
+    action :create
+  end
+  unless (File.exists?("#{node['ceph']['config']['rgw']['nss db path']}/cert8.db") && File.exists?("#{node['ceph']['config']['rgw']['nss db path']}/key3.db") && File.exists?("#{node['ceph']['config']['rgw']['nss db path']}/secmod.db"))
+    execute "keystone-ca certutil" do
+      command "openssl x509 -in #{node['ceph']['radosgw']['keystone_ca']} -pubkey | certutil -d #{node['ceph']['config']['rgw']['nss db path']} -A -n ca -t 'TCu,Cu,Tuw'"
+    end
+    execute "keystone-signing certutil" do
+      command "openssl x509 -in #{node['ceph']['radosgw']['keystone_signing']} -pubkey | certutil -A -d #{node['ceph']['config']['rgw']['nss db path']} -n signing_cert -t 'P,P,P'"
+    end
+  end
+end
