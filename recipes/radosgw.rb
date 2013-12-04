@@ -133,6 +133,8 @@ end
 # This is a work around until PR https://github.com/ceph/ceph-cookbooks/pull/79 is merged.
 # Once merged remove below this point although it shouldn't cause any issues.
 
+include_recipe "apache2"
+
 case node['platform_family']
 when "debian"
   packages = %w{
@@ -165,5 +167,14 @@ if !(node["ceph"]["radosgw"]["keystone_ca"].nil? || node["ceph"]["radosgw"]["key
     execute "keystone-signing certutil" do
       command "openssl x509 -in #{node['ceph']['radosgw']['keystone_signing']} -pubkey | certutil -A -d #{node['ceph']['config']['rgw']['nss db path']} -n signing_cert -t 'P,P,P'"
     end
+  end
+  file "#{node['ceph']['config']['rgw']['nss db path']}/cert8.db" do
+    owner node['apache']['user']
+  end
+  file "#{node['ceph']['config']['rgw']['nss db path']}/key3.db" do
+    owner node['apache']['user']
+  end
+  file "#{node['ceph']['config']['rgw']['nss db path']}/secmod.db" do
+    owner node['apache']['user']
   end
 end
