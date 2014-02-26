@@ -123,7 +123,7 @@ keystone_endpoint "Register Storage Endpoint" do
   api_ver ks_admin["path"]
   auth_token keystone["admin_token"]
   service_type "object-store"
-  endpoint_region "RegionOne"
+  endpoint_region node["osops"]["region"]
   endpoint_adminurl rgw_access['uri']
   endpoint_internalurl rgw_access['uri']
   endpoint_publicurl rgw_access['uri']
